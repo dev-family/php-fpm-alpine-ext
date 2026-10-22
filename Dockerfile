@@ -1,4 +1,6 @@
-FROM php:8.2.4-fpm-alpine3.17
+# Рецепт ghcr.io/step3003/php-fpm-alpine:4.1.0 (git-тег v4.1.0), отличие — PHP 8.2.4 → 8.2.35
+# (PHP2Shell, CVE-2026-109618, CVE-2026-109619) на базе php:8.2.35-fpm-alpine3.23.
+FROM php:8.2.35-fpm-alpine3.23
 
 ENV EXT_REDIS_VERSION=5.3.7
 ENV EXT_IGBINARY_VERSION=3.2.7
@@ -18,6 +20,14 @@ RUN apk update && apk add --no-cache linux-headers \
     libavif \
     zstd \
     imagemagick \
+    # на Alpine 3.17 imagemagick тянул все делегаты, на 3.23 они вынесены в подпакеты — возвращаем набор форматов 4.1.0
+    imagemagick-heic \
+    imagemagick-jxl \
+    imagemagick-pango \
+    imagemagick-pdf \
+    imagemagick-raw \
+    imagemagick-svg \
+    imagemagick-tiff \
     libpq \
     libgomp
 
@@ -53,11 +63,13 @@ RUN apk add --no-cache --update --virtual .ext-deps \
     sockets \
     exif \
     && \
+    docker-php-ext-configure ftp --with-openssl-dir=/usr && \
+    docker-php-ext-install ftp && \
     rm -rf /usr/src/php-available-exts && \
     apk del .ext-deps && \
     apk del .phpize-deps
 
-COPY --from=composer:2.4 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.4.4 /usr/bin/composer /usr/bin/composer
 
 RUN addgroup --system --gid $GID $USER && \
     adduser --uid $UID \
